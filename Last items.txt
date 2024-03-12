@@ -1,0 +1,14 @@
+then add current job subreport to the totals page at the end we surpressed with the cost, diff
+PARENT
+10079 + (20.96 * 1.1) - MATERIAL MARKUP 10125.30
+
+ MATERIAL MARKUP (10125.30) + 6647.12 (LABOR) + PLATING MARKUP (2750, BUT FOR PLATING, 3712.50) = TOTAL MARKUP COST FOR PARENT
+ 2461
+ 
+ 
+ 9602 TOtal Cost Current Job + 20.96
+ 
+ Dollars material
+19020 
+
+Dollars Material (9602) + Total Prt Labor 6647 + Outside
