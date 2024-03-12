@@ -1,0 +1,97 @@
+Program.Sub.Preflight.Start
+Program.Sub.Preflight.End
+
+Program.Sub.Main.Start
+
+F.Intrinsic.Control.SetErrorHandler("Main_Err")
+F.Intrinsic.Control.ClearErrors
+
+v.Global.sbegsalesperson.Declare(String)
+v.Global.sendingsalesperson.Declare(String)
+V.Local.sError.Declare(String)
+v.Local.ssql.Declare(String)
+v.Local.sretmat.Declare(string)
+v.Local.fmat.Declare(float)
+v.Local.slabor.Declare(string)
+v.Local.flabor.Declare(float)
+v.Local.fmatmarkup.Declare(float)
+V.Local.FTOTAL.Declare(FLOAT)
+v.Local.slabmat.Declare(string)
+v.Local.flabmat.Declare(float)
+
+'open connection'opening connection
+F.ODBC.Connection!conx.OpenConnection(V.Ambient.PDSN,V.Ambient.PUser,V.Ambient.PPass)
+
+f.Intrinsic.Control.If(v.Passed.CALLING-PGM,=,"JB0122")
+	f.Intrinsic.String.Build("select (FL_DOLLARS * 1.1) from V_BI_WO_DETAIL where JOB_SEQ < '990000' and TRMNL = '{0}' and FL_LABEL = 'Material' and JOB_SUFFIX <> '000'","008",v.Local.ssql)
+	Function.ODBC.Connection!conx.ExecuteAndReturn(v.Local.ssql,v.Local.sretmat)
+	v.local.fmat.Set(v.Local.sretmat)
+
+	f.Intrinsic.String.Build("select SUM(OVHD) from V_BI_WO_DETAIL where JOB_SEQ < '990000' and TRMNL = '{0}' and JOB_SUFFIX <> '000'","008",v.Local.ssql)
+	Function.ODBC.Connection!conx.ExecuteAndReturn(v.Local.ssql,v.Local.slabor)
+	v.Local.flabor.Set(v.Local.slabor)
+	f.Intrinsic.Math.Add(v.Local.flabor,v.Local.fmat,v.Local.fmat)
+	
+	f.Intrinsic.String.Build("select SUM(LAB_MAT) as LAB_MAT from V_BI_WO_DETAIL where SEQ < '990000' and LMO = 'M' and TRMNL = '{0}' and JOB_SUFFIX = '000'","008",v.Local.ssql)	
+	Function.ODBC.Connection!conx.ExecuteAndReturn(v.Local.ssql,v.Local.slabmat)
+	v.Local.flabmat.Set(v.Local.slabmat)
+	f.Intrinsic.Math.Mult(1.1,v.Local.flabmat,v.Local.fmatmarkup)	
+	'get the MATERIAL MARK UP
+	f.Intrinsic.Math.Add(v.Local.fmatmarkup,v.Local.fmat,v.Local.fmatmarkup)
+
+	'this is the labor
+	f.Intrinsic.String.Build("select SUM(OVHD) from V_BI_WO_DETAIL where JOB_SEQ < '990000' and TRMNL = '{0}' and JOB_SUFFIX = '000'","008",v.Local.ssql)
+	Function.ODBC.Connection!conx.ExecuteAndReturn(v.Local.ssql,v.Local.slabor)
+	v.Local.flabor.Set(v.Local.slabor)
+	
+	f.Intrinsic.Math.Add(v.Local.fmatmarkup,v.Local.flabor,v.Local.ftotal)
+	
+	'this is the outside
+	f.Intrinsic.String.Build("select FL_DOLLARS from V_BI_WO_DETAIL where JOB_SEQ < '990000' and TRMNL = '{0}' and JOB_SUFFIX = '000' and FL_LABEL = 'Outside'","008",v.Local.ssql)
+	Function.ODBC.Connection!conx.ExecuteAndReturn(v.Local.ssql,v.Local.slabor)
+	v.Local.flabor.Set(v.Local.slabor)
+	f.Intrinsic.Math.mult(v.Local.flabor,1.3,v.Local.flabor)
+	f.Intrinsic.Math.Add(v.Local.ftotal,v.Local.flabor,v.Local.FTOTAL)
+	
+	v.Local.ssql.Set("Delete from GCG_4540_Calcs")
+	Function.ODBC.Connection!conx.Execute(v.Local.ssql)
+	
+	f.Intrinsic.String.Build("INSERT INTO GCG_4540_CALCS (MAT_MARKUP, TOTAL_MARKUP) values ('{0}','{1}')",v.Local.fmatmarkup,v.Local.FTOTAL,v.Local.ssql)
+	Function.ODBC.Connection!conx.Execute(v.Local.ssql)
+f.Intrinsic.Control.EndIf
+
+f.Intrinsic.Control.CallSub(unload)
+
+
+F.Intrinsic.Control.ExitSub
+
+F.Intrinsic.Control.Label("Main_Err")
+F.Intrinsic.Control.If(V.Ambient.ErrorNumber,<>,0)
+	Function.Intrinsic.String.Concat("Project: GCG_4540_Preproc.g2u",V.Ambient.Newline,V.Ambient.Newline,"Subroutine: ",V.Ambient.CurrentSubroutine,V.Ambient.NewLine,"Error Occurred ",V.Ambient.ErrorNumber," with description ",V.Ambient.ErrorDescription,V.Local.sError)
+	F.Intrinsic.UI.Msgbox(V.Local.sError)
+	f.Intrinsic.Control.CallSub(unload)
+Function.Intrinsic.Control.EndIf
+Program.Sub.Main.End
+
+Program.Sub.Unload.Start
+F.Intrinsic.Control.SetErrorHandler("Unload_Err")
+F.Intrinsic.Control.ClearErrors
+
+V.Local.sError.Declare(String)
+
+'closing connection and ending program
+F.ODBC.Connection!conx.Close
+Function.Intrinsic.Control.End
+
+F.Intrinsic.Control.ExitSub
+F.Intrinsic.Control.Label("Unload_Err")
+F.Intrinsic.Control.If(V.Ambient.ErrorNumber,<>,0)
+	Function.Intrinsic.String.Concat("Project: GCG_4540_PreProc.g2u",V.Ambient.Newline,V.Ambient.Newline,"Subroutine: ",V.Ambient.CurrentSubroutine,V.Ambient.NewLine,"Error Occurred ",V.Ambient.ErrorNumber," with description ",V.Ambient.ErrorDescription,V.Local.sError)
+	F.Intrinsic.UI.Msgbox(V.Local.sError)
+	f.Intrinsic.Control.End
+Function.Intrinsic.Control.EndIf
+Program.Sub.Unload.End
+
+Program.Sub.Process.Start
+
+Program.Sub.Process.End
